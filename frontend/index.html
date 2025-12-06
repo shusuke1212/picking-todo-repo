@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ピッキング ToDo v4.9.9（タブヘッダー版）</title>
+<style>
+  :root{
+    --primary:#2b6fff;
+    --pill-bg:#eef3ff;
+    --panel-bg:#fafafa;
+    --panel-border:#ddd;
+    --input-border:#ccc;
+    --focus:#ffd54f;
+    --status-blue:#cfe8ff;
+    --status-amber:#ffe6bf;
+    --status-purple:#e0c9ff;
+    --status-green:#cfead6;
+    --status-gray:#e6e6e6;
+  }
+  html,body{height:100%}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,
+      "Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",sans-serif;
+    margin:16px;color:#222
+  }
+  h1{font-size:20px;margin:0 0 8px}
+  h2{font-size:16px;margin:0 0 8px}
+  .panel{
+    border:1px solid var(--panel-border);
+    border-radius:12px;
+    padding:12px;
+    background:var(--panel-bg);
+    margin-bottom:12px
+  }
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  label{font-size:12px;color:#333}
+  .controls label{margin-right:6px}
+  select,input[type="text"],input[type="file"],
+  input[type="number"],input[type="checkbox"],input[type="date"]{
+    padding:6px;border-radius:8px;border:1px solid var(--input-border);
+    font-size:14px
+  }
+  input[type="text"]#searchOrder{max-width:220px}
+  button{
+    padding:8px 12px;border-radius:10px;border:1px solid #bbb;
+    background:#fff;cursor:pointer
+  }
+  button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  button:focus,select:focus,input:focus{
+    outline:2px solid var(--primary);outline-offset:1px
+  }
+  .pill{
+    display:inline-block;padding:2px 8px;border-radius:999px;
+    background:var(--pill-bg);font-size:12px;border:1px solid #dbe2ff
+  }
+  .legend{display:flex;gap:8px;flex-wrap:wrap}
+  .legend .sw{
+    display:inline-block;width:14px;height:14px;border-radius:4px;
+    border:1px solid #bbb;margin-right:4px;vertical-align:-2px
+  }
+  .sw.blue{background:var(--status-blue)}
+  .sw.amber{background:var(--status-amber)}
+  .sw.purple{background:var(--status-purple)}
+  .sw.green{background:var(--status-green)}
+  .sw.gray{background:var(--status-gray)}
+
+  #tableWrap{max-height:70vh;overflow:auto;border:1px solid #eee;border-radius:12px}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+  thead th{
+    position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;
+    z-index:1;padding:8px;text-align:left
+  }
+  tbody td{border-bottom:1px solid #eee;padding:6px 8px;vertical-align:top}
+  tbody tr:hover{background:#fffdf3}
+  .ce{background:#fff9d2;border-radius:6px;min-height:22px}
+  .ce:focus{box-shadow:inset 0 0 0 2px var(--focus)}
+  .row-selected{box-shadow:inset 0 0 0 3px #ff6f61}
+
+  /* ステータス色（行） */
+  tr.status-blue{background:var(--status-blue)}
+  tr.status-amber{background:var(--status-amber)}
+  tr.status-purple{background:var(--status-purple)}
+  tr.status-green{background:var(--status-green)}
+  tr.status-gray{background:var(--status-gray)}
+
+  .orderno-badge{
+    display:inline-block;padding:2px 10px;border-radius:999px;
+    background:#222;color:#fff;font-weight:600;letter-spacing:0.5px;
+    cursor:pointer;user-select:none
+  }
+  .orderno-badge:active{transform:scale(0.98)}
+
+  .alert-yellow{box-shadow:inset 0 0 0 2px #ffd54f;border-radius:6px}
+  .alert-green{box-shadow:inset 0 0 0 2px #aeeaae;border-radius:6px}
+
+  .muted{color:#666;font-size:12px}
+  .mt8{margin-top:8px}
+  .mt4{margin-top:4px}
+  .mr4{margin-right:4px}
+  .gap8{gap:8px}
+  .flex{display:flex}
+  .col{flex-direction:column}
+  .space{flex:1}
+  .nowrap{white-space:nowrap}
+  .right{margin-left:auto}
+  .hidden{display:none}
+  .error{color:#b00020;font-size:12px}
+  #diffList{
+    margin:6px 0 0 0;padding:0;list-style:none;
+    display:flex;gap:6px;flex-wrap:wrap
+  }
+  #diffList li{
+    padding:2px 8px;border:1px dashed #bbb;
+    border-radius:999px;background:#fff
+  }
+
+  .folder-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:2px 10px;border-radius:999px;
+    border:1px solid #ccc;background:#fff
+  }
+
+  /* タブヘッダー */
+  .tab-bar{
+    display:flex;gap:4px;margin:8px 0 12px;
+    border-bottom:1px solid #ddd;
+  }
+  .tab-button{
+    border:none;
+    background:transparent;
+    padding:6px 12px;
+    border-radius:10px 10px 0 0;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .tab-button:hover{background:#f0f3ff}
+  .tab-button.active{
+    background:#ffffff;
+    border:1px solid #ddd;
+    border-bottom-color:#ffffff;
+    font-weight:600;
+    color:var(--primary);
+  }
+  .tab-panel{margin-bottom:12px}
+  .tab-panel.hidden{display:none}
+</style>
+</head>
+<body>
+  <h1>ピッキング ToDo v4.9.9（タブヘッダー版）</h1>
+
+  <!-- タブヘッダー -->
+  <div class="tab-bar" role="tablist" aria-label="メインメニュー">
+    <button class="tab-button active" data-tab="file" role="tab" aria-selected="true">ファイル</button>
+    <button class="tab-button" data-tab="edit" role="tab" aria-selected="false">編集</button>
+    <button class="tab-button" data-tab="view" role="tab" aria-selected="false">表示</button>
+    <button class="tab-button" data-tab="settings" role="tab" aria-selected="false">設定</button>
+  </div>
+
+  <!-- ファイル -->
+  <div id="tab-file" class="tab-panel">
+  <section class="panel" aria-label="ファイル操作">
+    <h2>ファイル</h2>
+    <div class="controls">
+      <label for="importJson">ファイルを選択（JSON）</label>
+      <input id="importJson" type="file" accept=".json" />
+      <button id="importLatest">最新バックアップ読込（ローカル）</button>
+      <button id="exportJson">JSONエクスポート（ローカル）</button>
+
+      <!-- ★ ここから追加：サーバー連携 -->
+      <button id="loadFromServer" class="primary">サーバーから読込</button>
+      <button id="saveToServer">サーバーへ保存</button>
+      <!-- ★ ここまで追加 -->
+    </div>
+    <p class="muted mt4">
+      JSONファイルやサーバーバックアップを使って、他端末と共有したり、バックアップを復元できます。
+    </p>
+  </section>
+</div>
+     
+  <!-- 編集 -->
+  <div id="tab-edit" class="tab-panel hidden">
+    <!-- ① リストを追加・更新（CSV取込） -->
+    <section class="panel" aria-labelledby="sec-import">
+      <h2 id="sec-import">リストを追加・更新（CSV取込）</h2>
+      <div class="controls" role="group" aria-label="CSV取り込み">
+        <label for="csvInput">CSV 取込：</label>
+        <input id="csvInput" type="file" accept=".csv" />
+        <span class="muted">（先頭2行=説明、3行目=ヘッダー）</span>
+      </div>
+      <div id="diffPanel" class="mt8 hidden">
+        <div><span class="pill">新規発注№</span> <span id="diffCount">0</span> 件</div>
+        <ul id="diffList"></ul>
+        <div class="mt8">
+          <button id="applyDiff" class="primary">この画面に追加する</button>
+          <button id="cancelDiff">閉じる</button>
+        </div>
+      </div>
+      <div id="csvError" class="error mt8 hidden" aria-live="polite"></div>
+    </section>
+
+    <!-- 編集系ツール（検索・一括入力・凡例） -->
+    <section class="panel" aria-label="編集ツール">
+      <h2>編集ツール</h2>
+      <div class="controls">
+        <label for="searchOrder">検索（発注№）</label>
+        <input id="searchOrder" type="text" placeholder="/ でフォーカス" inputmode="numeric" />
+        <button id="searchClear">クリア</button>
+
+        <span class="space"></span>
+
+        <label for="bulkWorkPlan">作業予定日（一括）</label>
+        <input type="date" id="bulkWorkPlan" placeholder="YYYY-MM-DD"
+               title="作業予定日をカレンダーから選択"/>
+        <button id="applyBulkWorkPlan">一括反映</button>
+      </div>
+
+      <div class="legend mt8">
+        <span class="pill"><span class="sw blue"></span>印刷済</span>
+        <span class="pill"><span class="sw amber"></span>返却待ち</span>
+        <span class="pill"><span class="sw purple"></span>ピッキング完了</span>
+        <span class="pill"><span class="sw green"></span>出庫済</span>
+        <span class="pill"><span class="sw gray"></span>入庫確認</span>
+        <span class="pill">作業予定日セル：0-3日以内=黄枠 / 4-7日以内=緑枠</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- 表示 -->
+  <div id="tab-view" class="tab-panel hidden">
+    <section class="panel" aria-label="表示の整理">
+      <h2>表示の整理</h2>
+      <div class="controls">
+        <label for="sortKey">並べ替え</label>
+        <select id="sortKey">
+          <option value="">（未指定）</option>
+          <option value="status">状態</option>
+          <option value="orderNo">発注№</option>
+          <option value="類別">類別</option>
+          <option value="最早積込日">最早積込日</option>
+          <option value="最遅返却日">最遅返却日</option>
+          <option value="作業予定日">作業予定日</option>
+          <option value="作業者">作業者</option>
+          <option value="ピッキング予想時間">ピッキング予想時間</option>
+          <option value="片付け予想時間">片付け予想時間</option>
+          <option value="物件名">物件名</option>
+          <option value="アイテム数">アイテム数</option>
+        </select>
+        <label class="mr4" for="sortDir">順序</label>
+        <select id="sortDir">
+          <option value="asc">昇順</option>
+          <option value="desc">降順</option>
+        </select>
+        <button id="applySort">適用</button>
+
+        <span class="space"></span>
+
+        <label class="nowrap"><input type="checkbox" id="hideCompleted" /> 入庫確認を隠す</label>
+        <label class="nowrap">
+          完了から
+          <input id="hideDays" type="number" min="0" step="1" style="width:72px">
+          日以上を隠す
+        </label>
+      </div>
+
+      <div class="controls mt8">
+        <label class="nowrap" for="workPlanFilter">作業予定日</label>
+        <select id="workPlanFilter">
+          <option value="all">すべて</option>
+          <option value="today">今日</option>
+          <option value="tomorrow">明日</option>
+          <option value="week">今週</option>
+          <option value="date">日付指定</option>
+        </select>
+        <input id="workPlanDate" type="date" class="hidden" />
+        <button id="clearWorkPlanFilter">解除</button>
+
+        <span class="space"></span>
+
+        <span id="hiddenInfo" class="pill">非表示 0 件</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- 設定 -->
+  <div id="tab-settings" class="tab-panel hidden">
+    <section class="panel" aria-label="保存・環境設定">
+      <h2>設定</h2>
+      <div class="controls">
+        <span id="exportTarget" class="folder-pill hidden" title="選択中のフォルダ">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M10 4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h6z" stroke="#666"/>
+          </svg>
+          <span id="exportTargetName">未設定</span>
+        </span>
+        <button id="btnSetExportDir">フォルダ設定/変更</button>
+        <button id="btnClearExportDir">設定解除</button>
+
+        <span class="space"></span>
+
+        <button id="saveTodo" class="primary">端末保存</button>
+        <button id="clearLocal">端末クリア</button>
+      </div>
+      <p class="muted mt4" id="fsNotice"></p>
+    </section>
+  </div>
+
+  <!-- テーブル本体 -->
+  <div id="tableWrap" aria-live="polite">
+    <table id="dataTable" aria-describedby="hiddenInfo">
+      <thead>
+        <tr>
+          <th>選</th>
+          <th>発注№</th>
+          <th>状態</th>
+          <th>物件№</th>
+          <th>物件名</th>
+          <th>製作担当(発注)名</th>
+          <th>類別</th>
+          <th>最早積込日</th>
+          <th>最遅返却日</th>
+          <th>作業予定日</th>
+          <th>作業者</th>
+          <th>ピッキング予想時間</th>
+          <th>片付け予想時間</th>
+          <th>備考①(条件)</th>
+          <th>備考欄②(残り作業)</th>
+          <th>アイテム数</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+<script>
+(function(){
+  'use strict';
+  // ===== API設定（FastAPI側と接続） =====
+  // 例: ローカル開発中なら "http://localhost:8000"
+  // 本番サーバーにデプロイしたら、そのURLに変更
+  const API_BASE = 'http://localhost:8000';
+
+  // API_TOKEN を使う場合（backend側の API_TOKEN と合わせる）
+  const API_TOKEN = null; // 例: 'your-secret-token'
+
+  // ===== 定数 =====
+  const STORE_KEY = 'picking_todo_store_v4';
+  const SETTINGS_KEY = 'picking_todo_settings_v2';
+  const FS_DB_NAME = 'picking_todo_fs_db_v1';
+  const FS_STORE = 'handles';
+  const FS_KEY_EXPORT_DIR = 'exportDir';
+  const DEFAULT_STATUS_ORDER = ["未提出","印刷済","返却待ち","ピッキング完了","出庫済","入庫確認"]; // 6段階
+  const FS_KEY_EXPORT_DIR_META = 'exportDirMeta'; // ←追加：表示用メタ（名前だけ）を別保存
+  const STATUS_CLASS = {
+    "印刷済":"status-blue",
+    "返却待ち":"status-amber",
+    "ピッキング完了":"status-purple",
+    "出庫済":"status-green",
+    "入庫確認":"status-gray"
+  };
+
+  // ===== 状態 =====
+  let todoStore = {}; // { orderNo: {status,completedAt,updatedAt,fields{...}} }
+  let settings = { sortKey: '', sortDir: 'asc', hideCompleted: false, hideDays: 0, workPlanFilter:'all', workPlanDate:'' };
+  let lastRenderRows = []; // 並べ替え・フィルタ後の orderNo 配列（Enter移動用）
+  let exportDirHandle = null; // FileSystemDirectoryHandle（IndexedDBに保存）
+
+  // ===== ユーティリティ =====
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  function nowISO(){ return new Date().toISOString(); }
+  function toYYYYMMDD(d){ if(!(d instanceof Date)) return ''; const y=d.getFullYear(); const m=('0'+(d.getMonth()+1)).slice(-2); const da=('0'+d.getDate()).slice(-2); return `${y}-${m}-${da}`; }
+  function normalizeDateStr(str){
+    if(!str) return '';
+    let s = String(str).trim();
+    if(!s) return '';
+    s = s.replace(/\./g,'/');
+    if(/^\d{8}$/.test(s)){ return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8); }
+    const t = new Date(s); if(!isNaN(t)) return toYYYYMMDD(t);
+    const m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if(m){ const d=new Date(+m[1],+m[2]-1,+m[3]); if(!isNaN(d)) return toYYYYMMDD(d); }
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; return '';
+  }
+  function startOfWeek(d){ const wd = (d.getDay()+6)%7; const nd = new Date(d); nd.setHours(0,0,0,0); nd.setDate(nd.getDate()-wd); return nd; }
+  function endOfWeek(d){ const s=startOfWeek(d); const e=new Date(s); e.setDate(e.getDate()+6); return e; }
+  function daysDiff(fromYYYYMMDD, toDate=new Date()){ if(!fromYYYYMMDD) return Infinity; const [y,m,da] = fromYYYYMMDD.split('-').map(Number); if(!y||!m||!da) return Infinity; const a = new Date(y, m-1, da); a.setHours(0,0,0,0); const b = new Date(toDate); b.setHours(0,0,0,0); return Math.round((a-b)/86400000); }
+  function localeCmp(a,b){ return String(a).localeCompare(String(b),'ja'); }
+  function normalizeStatus(s){ if(!s) return ''; const t = String(s).trim(); if(t==="出庫完了") return "出庫済"; if(DEFAULT_STATUS_ORDER.includes(t)) return t; return ''; }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+  // ===== CSV 解析（軽量） =====
+  function parseCSV(text){
+    const rows=[]; let i=0, cur='', inQ=false; const push=()=>{(rows[rows.length-1]||rows.push([]), rows[rows.length-1]).push(cur); cur='';};
+    rows.push([]);
+    while(i<text.length){ const c=text[i++]; if(inQ){ if(c==='"'){ if(text[i]==='"'){ cur+='"'; i++; } else { inQ=false; } } else cur+=c; } else { if(c==='"'){ inQ=true; } else if(c===','){ push(); } else if(c==='\n'){ push(); rows.push([]); } else if(c==='\r'){ } else cur+=c; } }
+    push(); if(rows.length && rows[rows.length-1].length===1 && rows[rows.length-1][0]==='') rows.pop(); return rows;
+  }
+  function readFileAsText(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onerror=()=>rej(fr.error); fr.onload=()=>res(fr.result); fr.readAsText(file,'utf-8'); }); }
+
+  // ===== localStorage =====
+  function loadLocal(){
+    try{
+      const s = localStorage.getItem(STORE_KEY); if(s){ todoStore = JSON.parse(s)||{}; }
+      const st = localStorage.getItem(SETTINGS_KEY); if(st){ settings = Object.assign(settings, JSON.parse(st)||{}); }
+      Object.keys(todoStore).forEach(k=>{ const v=todoStore[k]; v.status = normalizeStatus(v.status); if(v.status==="入庫確認" && !v.completedAt){ v.completedAt = v.updatedAt || nowISO(); } });
+    }catch(e){ console.warn('loadLocal error', e); }
+  }
+  function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(todoStore)); localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+
+  // ===== IndexedDB（FileSystemHandle保存） =====
+  function openFsDB(){
+    return new Promise((resolve, reject)=>{
+      const req = indexedDB.open(FS_DB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(FS_STORE); };
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => resolve(req.result);
+    });
+  }
+  async function idbSet(key, value){ const db = await openFsDB(); return new Promise((res,rej)=>{ const tx=db.transaction(FS_STORE,'readwrite'); tx.objectStore(FS_STORE).put(value, key); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+  async function idbGet(key){ const db = await openFsDB(); return new Promise((res,rej)=>{ const tx=db.transaction(FS_STORE,'readonly'); const req=tx.objectStore(FS_STORE).get(key); req.onsuccess=()=>res(req.result||null); req.onerror=()=>rej(req.error); }); }
+  async function idbDel(key){ const db = await openFsDB(); return new Promise((res,rej)=>{ const tx=db.transaction(FS_STORE,'readwrite'); tx.objectStore(FS_STORE).delete(key); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+
+  // ===== CSV 集約 =====
+  function groupFromCsvRows(rows){
+    if(rows.length<3){ throw new Error('CSVの行数が不足しています（最低3行）'); }
+    const header = rows[2].map(h=>h.trim());
+    const data = rows.slice(3).filter(r=>r.some(c=>String(c).trim()!==''));
+    const idx = (name)=> header.indexOf(name);
+    const ixOrder = idx('発注№'); if(ixOrder===-1) throw new Error('ヘッダーに「発注№」が見つかりません');
+    const ixProjNo = idx('物件№');
+    const ixProjName = idx('物件名');
+    const ixMaker = idx('製作担当(発注)名');
+    const ixClass = idx('類別');
+    const ixLoad = idx('積込日');
+    const ixReturn = idx('返却日');
+    const ixStatus = header.includes('状態')? idx('状態') : -1;
+
+    const groups = {};
+    for(const r of data){
+      const orderNo = String(r[ixOrder]||'').trim();
+      if(!orderNo || orderNo.includes('【') || orderNo.includes('計')) continue;
+      const g = groups[orderNo] || (groups[orderNo] = {rows:[], makers:new Set(), classes:new Set(), loads:[], returns:[], projNo:'', projName:'', statusCandidate:''});
+      g.rows.push(r);
+      if(ixProjNo!==-1 && !g.projNo) g.projNo = String(r[ixProjNo]||'').trim();
+      if(ixProjName!==-1 && !g.projName) g.projName = String(r[ixProjName]||'').trim();
+      if(ixMaker!==-1){ const v = String(r[ixMaker]||'').trim(); if(v) g.makers.add(v); }
+      if(ixClass!==-1){ const v = String(r[ixClass]||'').trim(); if(v) g.classes.add(v); }
+      if(ixLoad!==-1){ const v = normalizeDateStr(r[ixLoad]); if(v) g.loads.push(v); }
+      if(ixReturn!==-1){ const v = normalizeDateStr(r[ixReturn]); if(v) g.returns.push(v); }
+      if(ixStatus!==-1){ const v = normalizeStatus(r[ixStatus]); if(v) g.statusCandidate = v; }
+    }
+    const result = {};
+    for(const [orderNo, g] of Object.entries(groups)){
+      const fields = {
+        "物件№": g.projNo||'',
+        "物件名": g.projName||'',
+        "製作担当(発注)名": Array.from(g.makers).join(' / '),
+        "類別": Array.from(g.classes).join(' / '),
+        "最早積込日": g.loads.length? g.loads.sort()[0] : '',
+        "最遅返却日": g.returns.length? g.returns.sort().slice(-1)[0] : '',
+        "作業予定日": '',
+        "作業者": '',
+        "ピッキング予想時間": '',
+        "片付け予想時間": '',
+        "備考①(条件)": '',
+        "備考欄②(残り作業)": '',
+        "アイテム数": String(g.rows.length)
+      };
+      result[orderNo] = { orderNo, fields, statusCandidate: g.statusCandidate };
+    }
+    return result;
+  }
+
+  // ===== 差分検出UI =====
+  let pendingGrouped = null; // 直近CSV集約結果
+  function showDiffPanel(grouped){
+    const existing = new Set(Object.keys(todoStore));
+    const news = Object.keys(grouped).filter(k=>!existing.has(k));
+    const diffPanel = $('#diffPanel');
+    if(news.length===0){ $('#diffCount').textContent = '0'; $('#diffList').innerHTML=''; diffPanel.classList.add('hidden'); alert('新規の発注№はありません。'); return; }
+    $('#diffCount').textContent = String(news.length);
+    $('#diffList').innerHTML = news.map(n=>`<li>${n}</li>`).join('');
+    diffPanel.classList.remove('hidden');
+  }
+  function applyDiff(){
+    if(!pendingGrouped) return;
+    const existing = new Set(Object.keys(todoStore));
+    const news = Object.keys(pendingGrouped).filter(k=>!existing.has(k));
+    const now = nowISO();
+    for(const orderNo of news){
+      const g = pendingGrouped[orderNo];
+      todoStore[orderNo] = {
+        status: normalizeStatus(g.statusCandidate)||'',
+        completedAt: null,
+        updatedAt: now,
+        fields: Object.assign({}, g.fields)
+      };
+    }
+    saveLocal(); pendingGrouped = null; $('#diffPanel').classList.add('hidden'); render(); alert(`${news.length} 件を追加しました。`);
+  }
+
+  // ===== レンダリング =====
+  const COLS = [
+    {key:'select', label:'選'},
+    {key:'orderNo', label:'発注№'},
+    {key:'status', label:'状態'},
+    {key:'物件№', field:true},
+    {key:'物件名', field:true},
+    {key:'製作担当(発注)名', field:true},
+    {key:'類別', field:true},
+    {key:'最早積込日', field:true},
+    {key:'最遅返却日', field:true},
+    {key:'作業予定日', field:true},
+    {key:'作業者', field:true},
+    {key:'ピッキング予想時間', field:true},
+    {key:'片付け予想時間', field:true},
+    {key:'備考①(条件)', field:true},
+    {key:'備考欄②(残り作業)', field:true},
+    {key:'アイテム数', field:true}
+  ];
+
+  function sortOrderNos(orderNos){
+    const sk = settings.sortKey||''; const dir = settings.sortDir==='desc'?-1:1;
+    const cmpDate = (a,b)=>{ const va=getVal(a), vb=getVal(b); const da=va?va:'9999-12-31', db=vb?vb:'9999-12-31'; return localeCmp(da,db)*dir; };
+    const getVal=(orderNo)=>{ if(sk==='status') return DEFAULT_STATUS_ORDER.indexOf(todoStore[orderNo].status); if(sk==='orderNo') return orderNo; if(sk==='アイテム数') return String(todoStore[orderNo].fields['アイテム数']||''); if(sk) return String(todoStore[orderNo].fields[sk]||''); return ''; };
+
+    if(!sk){ orderNos.sort((a,b)=>{ const sa = DEFAULT_STATUS_ORDER.indexOf(todoStore[a].status); const sb = DEFAULT_STATUS_ORDER.indexOf(todoStore[b].status); if(sa!==sb) return sa-sb; const da = todoStore[a].fields['最早積込日']||'9999-12-31'; const db = todoStore[b].fields['最早積込日']||'9999-12-31'; if(da!==db) return da.localeCompare(db); const ca = String(todoStore[a].fields['類別']||''); const cb = String(todoStore[b].fields['類別']||''); return ca.localeCompare(cb,'ja'); }); return orderNos; }
+
+    if(sk==='status'){ orderNos.sort((a,b)=>{ const va = DEFAULT_STATUS_ORDER.indexOf(todoStore[a].status); const vb = DEFAULT_STATUS_ORDER.indexOf(todoStore[b].status); return (va-vb)*dir; }); return orderNos; }
+    if(['最早積込日','最遅返却日','作業予定日'].includes(sk)){ orderNos.sort((a,b)=>cmpDate(a,b)); return orderNos; }
+    orderNos.sort((a,b)=> localeCmp(getVal(a), getVal(b)) * dir); return orderNos;
+  }
+
+  function applyFilters(orderNos){
+    const hidden = {count:0};
+    const q = $('#searchOrder').value.trim();
+    const hideCompleted = $('#hideCompleted').checked;
+    const hideDays = parseInt($('#hideDays').value||'0',10)||0;
+    const wf = $('#workPlanFilter').value;
+    const wfDateInput = $('#workPlanDate');
+    const wfDate = wf==='date' ? normalizeDateStr(wfDateInput.value) : '';
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const sw = startOfWeek(today); const ew = endOfWeek(today);
+
+    const out = [];
+    for(const k of orderNos){
+      const v = todoStore[k]; let hide=false;
+      if(q && !k.includes(q)) hide=true;
+      if(!hide && hideCompleted && v.status==="入庫確認") hide=true;
+      if(!hide && hideDays>0 && v.completedAt){ const d = new Date(v.completedAt); d.setHours(0,0,0,0); const diff = Math.round((today-d)/86400000); if(diff>=hideDays) hide=true; }
+      if(!hide && wf!=='all'){
+        const wp = normalizeDateStr(v.fields['作業予定日']);
+        if(!wp){ hide = true; }
+        else{ const wd = new Date(wp); wd.setHours(0,0,0,0); if(wf==='today'){ hide = wd.getTime()!==today.getTime(); } else if(wf==='tomorrow'){ const tm=new Date(today); tm.setDate(tm.getDate()+1); hide = wd.getTime()!==tm.getTime(); } else if(wf==='week'){ hide = !(wd>=sw && wd<=ew); } else if(wf==='date'){ hide = wp!==wfDate; } }
+      }
+      if(hide) hidden.count++; else out.push(k);
+    }
+    $('#hiddenInfo').textContent = `非表示 ${hidden.count} 件`;
+    return out;
+  }
+
+  function statusRowClass(status){ const cls = STATUS_CLASS[status]; return cls? cls : ''; }
+
+  function render(){
+    const tbody = $('#dataTable tbody');
+    const orderNos = Object.keys(todoStore);
+    sortOrderNos(orderNos);
+    const filtered = applyFilters(orderNos);
+    lastRenderRows = filtered.slice();
+
+    const html = filtered.map(orderNo=>{ const v = todoStore[orderNo]; const f = v.fields; const rowClass = statusRowClass(v.status); return `<tr data-orderno="${orderNo}" class="${rowClass}">
+        <td><input type="checkbox" class="row-check" aria-label="選択"></td>
+        <td><span class="orderno-badge" title="状態を循環（クリック） / Shift+クリックで選択">${orderNo}</span></td>
+        <td class="ce" data-field-status contenteditable="true">${escapeHtml(v.status)}</td>
+        ${cell('物件№',f)}
+        ${cell('物件名',f)}
+        ${cell('製作担当(発注)名',f)}
+        ${cell('類別',f)}
+        ${cell('最早積込日',f)}
+        ${cell('最遅返却日',f)}
+        ${cell('作業予定日',f,true)}
+        ${cell('作業者',f)}
+        ${cell('ピッキング予想時間',f)}
+        ${cell('片付け予想時間',f)}
+        ${cell('備考①(条件)',f)}
+        ${cell('備考欄②(残り作業)',f)}
+        ${cell('アイテム数',f)}
+      </tr>`; }).join('');
+
+    tbody.innerHTML = html;
+
+    // 予定日アラート
+    filtered.forEach(orderNo=>{
+      const v = todoStore[orderNo];
+      const st = v.status;
+      if(["未提出","印刷済","返却待ち"].includes(st)){
+        const earliest = normalizeDateStr(v.fields['最早積込日']);
+        const diff = daysDiff(earliest, new Date());
+        const tr = tbody.querySelector(`tr[data-orderno="${CSS.escape(orderNo)}"]`);
+        const td = tr && tr.querySelector('[data-field="作業予定日"]');
+        if(td && isFinite(diff)){
+          if(diff>=0 && diff<=3) td.classList.add('alert-yellow');
+          else if(diff>=4 && diff<=7) td.classList.add('alert-green');
+        }
+      }
+    });
+  }
+
+  function cell(name,f){ const v = f[name]||''; return `<td class="ce" data-field="${name}" contenteditable="true">${escapeHtml(v)}</td>`; }
+
+  // ===== File System Access（フォルダ記憶） =====
+  function fsSupported(){ return !!(window.showDirectoryPicker || window.showSaveFilePicker); }
+  async function ensureDirPermission(dirHandle){
+    if(!dirHandle) return false;
+    if(!dirHandle.queryPermission || !dirHandle.requestPermission) return false;
+    const q = await dirHandle.queryPermission({mode:'readwrite'});
+    if(q === 'granted') return true;
+    if(q === 'prompt'){
+      const r = await dirHandle.requestPermission({mode:'readwrite'});
+      return r === 'granted';
+    }
+    return false;
+  }
+
+  async function saveExportDirHandle(handle){
+  exportDirHandle = handle;
+  await idbSet(FS_KEY_EXPORT_DIR, handle);
+  await idbSet(FS_KEY_EXPORT_DIR_META, { name: handle.name || '（名称不明）', savedAt: Date.now() }); // ←追加
+  updateExportTargetUI();
+}
+
+async function clearExportDirHandle(){
+  exportDirHandle = null;
+  await idbDel(FS_KEY_EXPORT_DIR);
+  await idbDel(FS_KEY_EXPORT_DIR_META); // ←追加
+  updateExportTargetUI();
+}
+
+
+function updateExportTargetUI(opts={}){
+  const pill = $('#exportTarget');
+  const nameEl = $('#exportTargetName');
+
+  if (exportDirHandle) {
+    pill.classList.remove('hidden');
+    nameEl.textContent = exportDirHandle.name || '（名称不明）';
+    pill.title = '選択中のフォルダ';
+    return;
+  }
+
+  // ←追加：ハンドルが無くてもメタがあれば表示（権限なしの見える化）
+  if (opts.meta && opts.meta.name) {
+    pill.classList.remove('hidden');
+    nameEl.textContent = `${opts.meta.name}（要再許可）`;
+    pill.title = 'フォルダは記憶されていますが、アクセス許可が必要です。「フォルダ設定/変更」で再許可してください。';
+    return;
+  }
+
+  pill.classList.add('hidden');
+  nameEl.textContent = '未設定';
+  pill.title = '';
+}
+
+
+
+async function restoreExportDir(){
+  try{
+    const h    = await idbGet(FS_KEY_EXPORT_DIR);
+    const meta = await idbGet(FS_KEY_EXPORT_DIR_META); // フォルダ名などのメタ情報
+
+    if (h) {
+      exportDirHandle = h;
+
+      // ★起動時は requestPermission を呼ばず、状態だけ確認する
+      let hasPerm = false;
+      if (exportDirHandle.queryPermission) {
+        try{
+          const q = await exportDirHandle.queryPermission({ mode: 'readwrite' });
+          hasPerm = (q === 'granted');
+        }catch(err){
+          console.warn('queryPermission failed', err);
+        }
+      }
+
+      // 権限が無ければ「要再許可」の表示用にメタ情報だけ使う
+      updateExportTargetUI({ meta: (!hasPerm && meta) ? meta : null });
+      return;
+    }
+
+    // ハンドルが無くてもメタがあれば名前だけ出す
+    if (meta) {
+      updateExportTargetUI({ meta });
+      return;
+    }
+
+    // 何も無ければ「未設定」
+    updateExportTargetUI();
+  }catch(e){
+    console.warn('restoreExportDir failed', e);
+  }
+}
+
+
+
+  async function pickExportDir(){
+    if(!window.showDirectoryPicker){ alert('このブラウザはフォルダ選択に未対応です（Chrome/Edge推奨）。'); return null; }
+    try{ const dir = await window.showDirectoryPicker({ id:'picking_todo_export', mode:'readwrite', startIn:'documents' }); return dir; }
+    catch(e){ if(e && e.name==='AbortError') return null; console.warn(e); alert('フォルダ選択に失敗しました。'); return null; }
+  }
+
+  async function writeJsonToDir(filename, json){
+    if(!exportDirHandle){ return false; }
+    try{
+      const perm = await ensureDirPermission(exportDirHandle);
+      if(!perm){ alert('フォルダへの書き込み権限がありません。\n「フォルダ設定/変更」で再設定してください。'); return false; }
+      const fileHandle = await exportDirHandle.getFileHandle(filename, { create:true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      return true;
+    }catch(e){ console.warn(e); return false; }
+  }
+
+  // バックアップ世代管理：最新 BACKUP_KEEP 件を残し、それ以外を削除
+  async function rotateBackups(dirHandle){
+    try{
+      const perm = await ensureDirPermission(dirHandle);
+      if(!perm) return;
+      const list = [];
+      for await (const [name, handle] of dirHandle.entries()){
+        if(handle.kind === 'file' && name.startsWith('picking_todo_backup_') && name.endsWith('.json') && name.length === 'picking_todo_backup_YYYYMMDD-HHMMSS.json'.length){
+          list.push(name);
+        }
+      }
+      if(list.length <= (typeof BACKUP_KEEP!=='undefined'?BACKUP_KEEP:3)) return;
+      list.sort((a,b)=> b.localeCompare(a));
+      const keep = (typeof BACKUP_KEEP!=='undefined'?BACKUP_KEEP:3);
+      const toDelete = list.slice(keep);
+      for(const name of toDelete){
+        try{ await dirHandle.removeEntry(name); }catch(e){ console.warn('removeEntry failed', name, e); }
+      }
+    }catch(e){ console.warn('rotateBackups error', e); }
+  }
+
+// 最新バックアップを自動選択してインポート
+async function importLatestBackup(){
+  if(!fsSupported()){
+    alert('このブラウザはフォルダからの自動インポートに未対応です。Chrome/Edgeをお試しください。');
+    return;
+  }
+  if(!exportDirHandle){
+    alert('フォルダが未設定です。先に「フォルダ設定/変更」で保存先を設定してください。');
+    return;
+  }
+  const perm = await ensureDirPermission(exportDirHandle);
+  if(!perm){
+    alert('フォルダへの読み取り権限がありません。\n「フォルダ設定/変更」で再設定してください。');
+    return;
+  }
+
+  let latest = null;
+  const targetLen = 'picking_todo_backup_YYYYMMDD-HHMMSS.json'.length;
+  for await (const [name, handle] of exportDirHandle.entries()){
+    if(handle.kind==='file'
+      && name.startsWith('picking_todo_backup_')
+      && name.endsWith('.json')
+      && name.length===targetLen){
+      if(!latest || name > latest.name) latest = { name, handle };
+    }
+  }
+  if(!latest){ alert('バックアップが見つかりません。'); return; }
+
+  const file = await latest.handle.getFile();
+  const text = await file.text();
+  const obj = JSON.parse(text);
+  if(typeof obj!== 'object' || Array.isArray(obj)) throw new Error('データ形式が不正です');
+
+  // 既存ロジックと同じ後処理
+  todoStore = obj;
+  Object.keys(todoStore).forEach(k=>{
+    const v=todoStore[k];
+    v.status=normalizeStatus(v.status);
+    if(v.status==='入庫確認' && !v.completedAt) v.completedAt = v.updatedAt || nowISO();
+  });
+  saveLocal();
+  render();
+  alert(`最新バックアップ(${latest.name})を読み込みました。`);
+}
+  // ===== サーバー連携（FastAPI） =====
+  async function fetchFromServer(){
+    if(!API_BASE){
+      alert('API_BASE が設定されていません');
+      return;
+    }
+    try{
+      const res = await fetch(API_BASE + '/api/backup', {
+        method: 'GET',
+        headers: API_TOKEN ? { 'Authorization': 'Bearer ' + API_TOKEN } : {},
+      });
+      if(!res.ok){
+        throw new Error('HTTP ' + res.status);
+      }
+      const json = await res.json();
+      if(!json.ok){
+        throw new Error(json.error || 'unknown_error');
+      }
+
+      // サーバーから受け取った data を todoStore にそのまま適用
+      todoStore = json.data || {};
+
+      // ステータス正規化＆ completedAt 補正（念のため）
+      Object.keys(todoStore).forEach(k=>{
+        const v = todoStore[k];
+        v.status = normalizeStatus(v.status);
+        if(v.status === '入庫確認' && !v.completedAt){
+          v.completedAt = v.updatedAt || nowISO();
+        }
+      });
+
+      saveLocal();
+      render();
+      alert('サーバーからバックアップを読み込みました。');
+    }catch(err){
+      console.error(err);
+      alert('サーバー読込エラー: ' + (err.message || err));
+    }
+  }
+
+  async function saveToServer(){
+    if(!API_BASE){
+      alert('API_BASE が設定されていません');
+      return;
+    }
+    try{
+      const payload = {
+        data: todoStore,
+        meta: {
+          author: 'shusuke',  // 好きな名前に
+          reason: 'manual_save',
+        },
+      };
+
+      const res = await fetch(API_BASE + '/api/backup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_TOKEN ? { 'Authorization': 'Bearer ' + API_TOKEN } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if(!res.ok){
+        throw new Error('HTTP ' + res.status);
+      }
+      const json = await res.json();
+      if(!json.ok){
+        throw new Error('save_failed');
+      }
+
+      alert('サーバーへ保存しました。\ncommit: ' + (json.commit?.hash || 'unknown'));
+    }catch(err){
+      console.error(err);
+      alert('サーバー保存エラー: ' + (err.message || err));
+    }
+  }
+
+  // ===== イベント =====
+  function bindEvents(){
+    // ★ サーバー連携ボタン
+    $('#loadFromServer').addEventListener('click', fetchFromServer);
+    $('#saveToServer').addEventListener('click', saveToServer);
+
+    // CSV取込
+    $('#csvInput').addEventListener('change', async (e)=>{
+      $('#csvError').classList.add('hidden');
+      const file = e.target.files && e.target.files[0]; if(!file) return;
+      try{ const txt = await readFileAsText(file); const rows = parseCSV(txt); pendingGrouped = groupFromCsvRows(rows); showDiffPanel(pendingGrouped); }
+      catch(err){ $('#csvError').textContent = 'CSV読込エラー：' + (err.message||err); $('#csvError').classList.remove('hidden'); console.error(err); }
+    });
+
+    // 差分パネル
+    $('#applyDiff').addEventListener('click', applyDiff);
+    $('#cancelDiff').addEventListener('click', ()=>{ $('#diffPanel').classList.add('hidden'); pendingGrouped=null; });
+
+    // ソート適用
+    $('#applySort').addEventListener('click', ()=>{ settings.sortKey = $('#sortKey').value; settings.sortDir = $('#sortDir').value; saveLocal(); render(); });
+
+    // 検索（デバウンス）
+    let tSearch=null; $('#searchOrder').addEventListener('input', ()=>{ clearTimeout(tSearch); tSearch=setTimeout(()=>render(), 200); });
+    $('#searchClear').addEventListener('click', ()=>{ $('#searchOrder').value=''; render(); });
+
+    // 非表示設定
+    $('#hideCompleted').addEventListener('change', ()=>{ settings.hideCompleted = $('#hideCompleted').checked; saveLocal(); render(); });
+    $('#hideDays').addEventListener('input', ()=>{ settings.hideDays = parseInt($('#hideDays').value||'0',10)||0; saveLocal(); render(); });
+
+    // 作業予定日フィルタ
+    const wpf = $('#workPlanFilter'); const wpd = $('#workPlanDate');
+    function syncWpf(){ const v=wpf.value; wpd.classList.toggle('hidden', v!=='date'); settings.workPlanFilter=v; saveLocal(); render(); }
+    wpf.addEventListener('change', syncWpf); wpd.addEventListener('input', ()=>{ settings.workPlanDate = wpd.value; saveLocal(); render(); }); $('#clearWorkPlanFilter').addEventListener('click', ()=>{ wpf.value='all'; wpd.value=''; syncWpf(); });
+
+    // フォルダ設定/変更
+    $('#btnSetExportDir').addEventListener('click', async ()=>{
+      const dir = await pickExportDir(); if(!dir) return; await saveExportDirHandle(dir); alert('エクスポート先フォルダを設定しました。');
+    });
+    // 設定解除
+    $('#btnClearExportDir').addEventListener('click', async ()=>{
+  const meta = await idbGet(FS_KEY_EXPORT_DIR_META); // ←追加
+  if(!exportDirHandle && !meta){            // ←メタも無ければ未設定扱い
+    alert('設定されていません。');
+    return;
+  }
+  if(confirm('エクスポート先フォルダ設定を解除しますか？')){
+    await clearExportDirHandle();           // ←ハンドル有無に関わらず両方消す実装にしてある
+    alert('フォルダ設定を解除しました。');
+  }
+});
+
+
+    // JSON入出力
+    $('#exportJson').addEventListener('click', async ()=>{
+      try{
+        const json = JSON.stringify(todoStore, null, 2);
+        const ts = new Date();
+        const fn = `picking_todo_backup_${ts.getFullYear()}${('0'+(ts.getMonth()+1)).slice(-2)}${('0'+ts.getDate()).slice(-2)}-${('0'+ts.getHours()).slice(-2)}${('0'+ts.getMinutes()).slice(-2)}${('0'+ts.getSeconds()).slice(-2)}.json`;
+
+        // 1) 設定済みフォルダに自動保存（初回のみ選択、以後は無確認で保存）
+        if(exportDirHandle && fsSupported()){
+          const ok = await writeJsonToDir(fn, json);
+          if(ok){
+            await rotateBackups(exportDirHandle);
+            alert('共有データ（JSON）を設定済みフォルダに保存しました。（最新3件を自動保持）');
+            return;
+          }
+          // 書込み失敗時は下のフォールバックへ
+        }
+
+        // 2) フォルダ未設定 or 権限なし → 初回設定フロー
+        if(window.showDirectoryPicker){
+          const dir = await pickExportDir();
+          if(dir){ await saveExportDirHandle(dir); const ok = await writeJsonToDir(fn, json); if(ok){ await rotateBackups(exportDirHandle); alert('共有データ（JSON）を選択フォルダに保存しました。（最新3件を自動保持）'); return; } }
+        }
+
+        // 3) それでもダメならファイル保存ダイアログ、さらにダメなら通常ダウンロード
+        if (window.showSaveFilePicker){
+          const handle = await window.showSaveFilePicker({ suggestedName: fn, types: [{ description: 'JSON Backup', accept: { 'application/json': ['.json'] } }] });
+          const writable = await handle.createWritable(); await writable.write(json); await writable.close(); alert('共有データ（JSON）を保存しました。'); return;
+        }
+
+        // 4) 旧式フォールバック（ダウンロード）
+        const blob = new Blob([json], {type:'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fn; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+        alert('このブラウザではフォルダ記憶に未対応のため、通常のダウンロードで保存しました。');
+      }catch(err){ console.error(err); alert('保存に失敗しました。権限や保存先を確認してください。'); }
+    });
+   
+    $('#importJson').addEventListener('change', async (e)=>{
+      const file = e.target.files && e.target.files[0]; if(!file) return;
+      try{ const txt = await readFileAsText(file); const obj = JSON.parse(txt); if(typeof obj!== 'object' || Array.isArray(obj)) throw new Error('データ形式が不正です'); todoStore = obj; Object.keys(todoStore).forEach(k=>{ const v=todoStore[k]; v.status=normalizeStatus(v.status); if(v.status==='入庫確認' && !v.completedAt) v.completedAt = v.updatedAt || nowISO(); }); saveLocal(); render(); alert('JSONインポートが完了しました。'); }
+      catch(err){ alert('JSONインポートに失敗：'+(err.message||err)); }
+      e.target.value='';
+    });
+    $('#importLatest').addEventListener('click', importLatestBackup);
+
+    // 端末保存・クリア
+    $('#saveTodo').addEventListener('click', ()=>{ saveLocal(); alert('端末に保存しました。'); });
+    $('#clearLocal').addEventListener('click', ()=>{ if(confirm('localStorageを削除しますか？')){ localStorage.removeItem(STORE_KEY); todoStore = {}; render(); } });
+
+    // テーブル内：クリック・選択
+    $('#dataTable tbody').addEventListener('click', (e)=>{
+      const td = e.target.closest('td'); const tr = e.target.closest('tr'); if(!td||!tr) return; const orderNo = tr.getAttribute('data-orderno');
+      if(e.target.classList.contains('orderno-badge')){ if(e.shiftKey){ tr.querySelector('.row-check').click(); return; } const cur = todoStore[orderNo].status||''; const idx = DEFAULT_STATUS_ORDER.indexOf(cur); const next = DEFAULT_STATUS_ORDER[(idx+1) % DEFAULT_STATUS_ORDER.length]; todoStore[orderNo].status = next; if(next==='入庫確認') todoStore[orderNo].completedAt = nowISO(); else todoStore[orderNo].completedAt = null; todoStore[orderNo].updatedAt = nowISO(); saveLocal(); render(); return; }
+    });
+
+    $('#dataTable tbody').addEventListener('change', (e)=>{ if(e.target.classList.contains('row-check')){ const tr = e.target.closest('tr'); tr.classList.toggle('row-selected', e.target.checked); } });
+
+    // contentEditable 編集
+    $('#dataTable tbody').addEventListener('focusin', (e)=>{ const td = e.target.closest('td.ce'); if(!td) return; td.dataset.orig = td.textContent; });
+    $('#dataTable tbody').addEventListener('keydown', (e)=>{ const td = e.target.closest('td.ce'); if(!td) return; if(e.key==='Enter'){ e.preventDefault(); commitCell(td); moveToNextRowSameCol(td); } else if(e.key==='Escape'){ td.textContent = td.dataset.orig||''; e.preventDefault(); td.blur(); } });
+    $('#dataTable tbody').addEventListener('blur', (e)=>{ const td = e.target.closest('td.ce'); if(!td) return; commitCell(td); }, true);
+
+    // グローバルキー：/ で検索フォーカス
+    document.addEventListener('keydown', (e)=>{ if(e.key === '/'){ const tag = document.activeElement && document.activeElement.tagName; const isCE = document.activeElement && document.activeElement.isContentEditable; if(['INPUT','TEXTAREA','SELECT'].includes(tag) || isCE){ return; } e.preventDefault(); $('#searchOrder').focus(); } });
+
+    // 一括反映
+    $('#applyBulkWorkPlan').addEventListener('click', ()=>{
+      const v = normalizeDateStr($('#bulkWorkPlan').value); if(!v){ alert('YYYY-MM-DD 形式で入力してください'); return; }
+      const rows = $$('#dataTable tbody tr'); let cnt=0; rows.forEach(tr=>{ if(tr.querySelector('.row-check').checked){ const orderNo = tr.getAttribute('data-orderno'); todoStore[orderNo].fields['作業予定日'] = v; todoStore[orderNo].updatedAt = nowISO(); cnt++; } });
+      if(cnt>0){ saveLocal(); render(); }
+      alert(`${cnt} 行に反映しました。`);
+    });
+  }
+
+  function commitCell(td){
+    const tr = td.closest('tr'); const orderNo = tr.getAttribute('data-orderno');
+    if(td.hasAttribute('data-field-status')){
+      const val = normalizeStatus(td.textContent.trim()); const prev = todoStore[orderNo].status; todoStore[orderNo].status = val||''; if(prev!=="入庫確認" && val==="入庫確認"){ todoStore[orderNo].completedAt = nowISO(); } else if(val!=="入庫確認"){ todoStore[orderNo].completedAt = null; } todoStore[orderNo].updatedAt = nowISO(); saveLocal(); render(); return;
+    }
+    const field = td.getAttribute('data-field'); if(!field) return; let val = td.textContent.trim(); if(['最早積込日','最遅返却日','作業予定日'].includes(field)){ val = normalizeDateStr(val); td.textContent = val; }
+    todoStore[orderNo].fields[field] = val; todoStore[orderNo].updatedAt = nowISO(); saveLocal();
+  }
+
+  function moveToNextRowSameCol(td){ const tr = td.closest('tr'); const tbody = tr.parentElement; const colIndex = Array.from(tr.children).indexOf(td); const next = tr.nextElementSibling; if(next){ const cell = next.children[colIndex]; if(cell && cell.classList.contains('ce')){ cell.focus(); placeCaretAtEnd(cell); } } }
+  function placeCaretAtEnd(el){ const range = document.createRange(); range.selectNodeContents(el); range.collapse(false); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); }
+
+  // ===== 初期化 =====
+  function init(){
+    loadLocal();
+    $('#sortKey').value = settings.sortKey||'';
+    $('#sortDir').value = settings.sortDir||'asc';
+    $('#hideCompleted').checked = !!settings.hideCompleted;
+    $('#hideDays').value = settings.hideDays||0;
+    $('#workPlanFilter').value = settings.workPlanFilter||'all';
+    $('#workPlanDate').value = settings.workPlanDate||'';
+    $('#workPlanDate').classList.toggle('hidden', ($('#workPlanFilter').value!=='date'));
+
+    // ★タブ初期化
+    setupTabs();
+
+    // 既存のイベント・描画
+    bindEvents();
+    render();
+ 
+
+    // File System Access の注意書き
+    const notice = $('#fsNotice');
+    if(!fsSupported()){
+      notice.textContent = 'フォルダ記憶はChrome/EdgeなどFile System Access対応ブラウザで利用できます。Safari/Firefoxでは通常のダウンロード保存になります。';
+    }else{
+      notice.textContent = '初回だけフォルダを選択すると、以後は「JSONエクスポート」で同じ場所に自動保存されます。変更は「フォルダ設定/変更」から。保存先では最新3件のバックアップを自動保持します。';
+    }
+
+    // エクスポート先フォルダの復元（初回のみ選択、以後は自動）
+    restoreExportDir();
+
+ // ===== タブ切り替え =====
+  function setupTabs(){
+    const buttons = $$('.tab-button');
+    const panels = {
+      file:     $('#tab-file'),
+      edit:     $('#tab-edit'),
+      view:     $('#tab-view'),
+      settings: $('#tab-settings')
+    };
+
+    buttons.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const tab = btn.dataset.tab;
+
+        // ボタン側の見た目＆ARIA
+        buttons.forEach(b=>{
+          const active = (b === btn);
+          b.classList.toggle('active', active);
+          b.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+
+        // パネルの表示／非表示
+        Object.entries(panels).forEach(([key, panel])=>{
+          if(!panel) return;
+          const show = (key === tab);
+          panel.classList.toggle('hidden', !show);
+        });
+      });
+    });
+  }
+
+
+
+
+    // 任意：DnD対応
+    setupDnD();
+  }
+
+  function setupDnD(){
+    const dz = document.body; let enter=0;
+    dz.addEventListener('dragenter', (e)=>{ e.preventDefault(); enter++; document.body.style.outline='3px dashed #88aaff'; });
+    dz.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+    dz.addEventListener('dragleave', (e)=>{ enter--; if(enter<=0){ document.body.style.outline='none'; } });
+    dz.addEventListener('drop', async (e)=>{ e.preventDefault(); enter=0; document.body.style.outline='none'; const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if(!f) return; if(!/\.csv$/i.test(f.name)){ alert('CSVファイルをドロップしてください'); return; } try{ const txt = await readFileAsText(f); const rows = parseCSV(txt); pendingGrouped = groupFromCsvRows(rows); showDiffPanel(pendingGrouped); }catch(err){ alert('CSV読込エラー：'+(err.message||err)); }
+    });
+  }
+
+  // 実行
+  init();
+})();
+</script>
+</body>
+</html>
